@@ -1,0 +1,4 @@
+include(":viewcontract")
+include(":viewlegacy")
+include(":viewmodel")
+include(":viewmodelTests")
