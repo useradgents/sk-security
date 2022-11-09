@@ -29,6 +29,7 @@ interface SecurityActions {
         keyName: String,
         skEncodedData: String,
         onOk:((decryptedData:String)->Unit),
+        onUnrecoverableKey:()->Unit,
         onKo:((error:Boolean)->Unit)? = null,
     )
 }

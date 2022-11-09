@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import tech.skot.core.SKLog
 import tech.skot.core.components.SKActivity
+import java.security.UnrecoverableKeyException
 
 class SecurityActionsImpl(
     private val activity: SKActivity,
@@ -105,7 +106,13 @@ class SecurityActionsImpl(
                 object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                         super.onAuthenticationSucceeded(result)
-                        onOk(skCrypter.encode())
+                        try {
+                            skCrypter.encode()
+                        }
+                        catch (ex:Exception) {
+                            onKo?.invoke(true)
+                            null
+                        }?.let(onOk)
                     }
 
                     override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
@@ -131,38 +138,46 @@ class SecurityActionsImpl(
         keyName: String,
         skEncodedData: String,
         onOk: ((decryptedData: String) -> Unit),
+        onUnrecoverableKey:()->Unit,
         onKo: ((error: Boolean) -> Unit)?,
     ) {
-        val skCrypter = SKCrypt.getDeCrypter(keyName, skEncodedData)
-        BiometricPrompt(activity,
-            ContextCompat.getMainExecutor(activity),
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                    super.onAuthenticationSucceeded(result)
-                    try {
-                        onOk(skCrypter.decode())
-                    } catch (ex: Exception) {
-                        SKLog.e(ex, "Error on decoding")
+        try {
+            val skCrypter = SKCrypt.getDeCrypter(keyName, skEncodedData)
+            BiometricPrompt(activity,
+                ContextCompat.getMainExecutor(activity),
+                object : BiometricPrompt.AuthenticationCallback() {
+                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                        super.onAuthenticationSucceeded(result)
+                        try {
+                            onOk(skCrypter.decode())
+                        } catch (ex: Exception) {
+                            SKLog.e(ex, "Error on decoding")
+                            onKo?.invoke(true)
+                        }
+
+                    }
+
+                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                        super.onAuthenticationError(errorCode, errString)
+                        SKLog.e(Exception("Error on authentication"),
+                            "onAuthenticationError :$errString")
                         onKo?.invoke(true)
                     }
 
+                    override fun onAuthenticationFailed() {
+                        super.onAuthenticationFailed()
+                        onKo?.invoke(false)
+                    }
                 }
+            ).authenticate(
+                getPromptInfos(title, subTitle),
+                BiometricPrompt.CryptoObject(skCrypter.cipher)
+            )
+        }
+        catch (ex: UnrecoverableKeyException) {
+            SKLog.e(ex,"La clé ne peut être récupérée, les credentials ont dû changer")
+            onUnrecoverableKey.invoke()
+        }
 
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                    super.onAuthenticationError(errorCode, errString)
-                    SKLog.e(Exception("Error on authentication"),
-                        "onAuthenticationError :$errString")
-                    onKo?.invoke(true)
-                }
-
-                override fun onAuthenticationFailed() {
-                    super.onAuthenticationFailed()
-                    onKo?.invoke(false)
-                }
-            }
-        ).authenticate(
-            getPromptInfos(title, subTitle),
-            BiometricPrompt.CryptoObject(skCrypter.cipher)
-        )
     }
 }
