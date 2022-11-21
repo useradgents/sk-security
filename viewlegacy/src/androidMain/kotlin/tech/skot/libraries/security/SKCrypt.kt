@@ -22,7 +22,7 @@ object SKCrypt {
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_CBC)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_PKCS7)
-                .setUserAuthenticationRequired(true)
+                .setUserAuthenticationRequired(false)
                 .setInvalidatedByBiometricEnrollment(true)
                 .setUserAuthenticationParameters(validityInSeconds,
                     KeyProperties.AUTH_BIOMETRIC_STRONG or

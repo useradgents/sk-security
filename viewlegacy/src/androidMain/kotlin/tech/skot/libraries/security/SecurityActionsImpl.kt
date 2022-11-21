@@ -100,35 +100,48 @@ class SecurityActionsImpl(
         onKo: ((error: Boolean) -> Unit)?,
     ) {
         withBiometric {
-            val skCrypter = SKCrypt.getCrypter(keyName, strData)
-            BiometricPrompt(activity,
-                ContextCompat.getMainExecutor(activity),
-                object : BiometricPrompt.AuthenticationCallback() {
-                    override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                        super.onAuthenticationSucceeded(result)
-                        try {
-                            skCrypter.encode()
+            val crypter = try {
+                SKCrypt.getCrypter(keyName, strData)
+            } catch (ex: Exception) {
+                SKLog.e(ex)
+                onKo?.invoke(true)
+                null
+            }
+            crypter?.let { skCrypter ->
+                BiometricPrompt(activity,
+                    ContextCompat.getMainExecutor(activity),
+                    object : BiometricPrompt.AuthenticationCallback() {
+                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                            super.onAuthenticationSucceeded(result)
+                            try {
+                                skCrypter.encode()
+                            } catch (ex: Exception) {
+                                SKLog.e(ex, "onAuthenticationSucceeded but encode fail")
+                                onKo?.invoke(true)
+                                null
+                            }?.let(onOk)
                         }
-                        catch (ex:Exception) {
+
+                        override fun onAuthenticationError(
+                            errorCode: Int,
+                            errString: CharSequence,
+                        ) {
+                            super.onAuthenticationError(errorCode, errString)
                             onKo?.invoke(true)
-                            null
-                        }?.let(onOk)
-                    }
+                        }
 
-                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                        super.onAuthenticationError(errorCode, errString)
-                        onKo?.invoke(true)
+                        override fun onAuthenticationFailed() {
+                            super.onAuthenticationFailed()
+                            onKo?.invoke(false)
+                        }
                     }
+                ).authenticate(
+                    getPromptInfos(title, subTitle),
+                    BiometricPrompt.CryptoObject(skCrypter.cipher)
+                )
+            }
 
-                    override fun onAuthenticationFailed() {
-                        super.onAuthenticationFailed()
-                        onKo?.invoke(false)
-                    }
-                }
-            ).authenticate(
-                getPromptInfos(title, subTitle),
-                BiometricPrompt.CryptoObject(skCrypter.cipher)
-            )
+
         }
     }
 
@@ -138,7 +151,7 @@ class SecurityActionsImpl(
         keyName: String,
         skEncodedData: String,
         onOk: ((decryptedData: String) -> Unit),
-        onUnrecoverableKey:()->Unit,
+        onUnrecoverableKey: () -> Unit,
         onKo: ((error: Boolean) -> Unit)?,
     ) {
         try {
@@ -173,9 +186,8 @@ class SecurityActionsImpl(
                 getPromptInfos(title, subTitle),
                 BiometricPrompt.CryptoObject(skCrypter.cipher)
             )
-        }
-        catch (ex: UnrecoverableKeyException) {
-            SKLog.e(ex,"La clé ne peut être récupérée, les credentials ont dû changer")
+        } catch (ex: UnrecoverableKeyException) {
+            SKLog.e(ex, "La clé ne peut être récupérée, les credentials ont dû changer")
             onUnrecoverableKey.invoke()
         }
 
