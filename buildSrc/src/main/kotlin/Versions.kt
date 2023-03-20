@@ -1,6 +1,6 @@
- object Versions {
-    const val group = "tech.skot.libraries.sk-security"
+object Versions {
+    const val group = "com.github.useradgents.sk-security"
     const val library = "0.0.2"
-     const val frameworkGroup = "tech.skot"
-    const val framework = "1.1.78"
+    const val frameworkGroup = "com.github.useradgents.skot"
+    const val framework = "1.2.7-ua"
 }

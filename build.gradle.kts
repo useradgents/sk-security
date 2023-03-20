@@ -3,10 +3,13 @@ buildscript {
         google()
 //        mavenLocal()
         mavenCentral()
+        maven {
+            url = uri("https://jitpack.io")
+        }
     }
 
     dependencies {
-        classpath("tech.skot:plugin:${Versions.framework}")
+        classpath("${Versions.frameworkGroup}:plugin:${Versions.framework}")
         classpath("org.jetbrains.dokka:dokka-gradle-plugin:1.5.30")
     }
 }
@@ -24,6 +27,9 @@ allprojects {
         google()
 //        mavenLocal()
         mavenCentral()
+        maven {
+            url = uri("https://jitpack.io")
+        }
     }
 
     apply(plugin = "maven-publish")
